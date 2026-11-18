@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#101018">
+  <title>NOT | ربط محفظة TON</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;background:#101018;color:#f5f5f7;font-family:system-ui,-apple-system,sans-serif;display:grid;place-items:center;padding:22px}
+    .card{width:min(100%,430px);background:#191923;border:1px solid #343444;border-radius:24px;padding:26px;text-align:center;box-shadow:0 18px 60px #0006}
+    .logo{width:72px;height:72px;border-radius:22px;margin:0 auto 16px;background:linear-gradient(135deg,#7357ff,#22c58b);display:grid;place-items:center;font-weight:900;font-size:28px}
+    h1{margin:8px 0;font-size:25px}
+    p{color:#b9b9c7;line-height:1.8;font-size:14px}
+    button{width:100%;border:0;border-radius:14px;padding:15px;margin-top:12px;font-size:16px;font-weight:700;background:#7657ff;color:white}
+    button:disabled{opacity:.55}
+    .secondary{background:#30303d}
+    .address{margin-top:16px;padding:12px;border-radius:12px;background:#11111a;color:#bdb4ff;overflow-wrap:anywhere;font-size:12px;display:none}
+    .notice{font-size:12px;color:#9d9dab;margin-top:18px}
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="logo">NOT</div>
+    <h1>ربط محفظة TON</h1>
+    <p>اربط محفظتك لعرض عنوانها في حساب NOT. لا نطلب العبارة السرية أو المفتاح الخاص، ولا ننفذ معاملات أو عمليات سحب تلقائية.</p>
+    <button id="connect">👛 ربط محفظة TON</button>
+    <button id="disconnect" class="secondary" style="display:none">فصل المحفظة</button>
+    <div id="address" class="address"></div>
+    <div class="notice">الاتصال يتم عبر TON Connect. لا تشارك عبارة الاسترداد مع أي شخص.</div>
+  </main>
+<script type="module">
+  import { TonConnectUI } from "https://esm.sh/@tonconnect/ui@2.3.3";
+
+  const tg = window.Telegram?.WebApp;
+  if (tg) {
+    tg.ready();
+    tg.expand();
+  }
+
+  const connectButton = document.getElementById("connect");
+  const disconnectButton = document.getElementById("disconnect");
+  const addressBox = document.getElementById("address");
+
+  const tonConnectUI = new TonConnectUI({
+    manifestUrl: `${window.location.origin}/tonconnect-manifest.json`,
+    buttonRootId: null
+  });
+
+  function showWallet(wallet) {
+    if (!wallet || !wallet.account?.address) {
+      addressBox.style.display = "none";
+      disconnectButton.style.display = "none";
+      connectButton.style.display = "block";
+      return;
+    }
+
+    const address = wallet.account.address;
+    addressBox.textContent = "العنوان المتصل: " + address;
+    addressBox.style.display = "block";
+    connectButton.style.display = "none";
+    disconnectButton.style.display = "block";
+
+    if (tg) {
+      tg.sendData(JSON.stringify({
+        type: "ton_wallet_connected",
+        address
+      }));
+    }
+  }
+
+  tonConnectUI.onStatusChange(showWallet);
+
+  connectButton.addEventListener("click", async () => {
+    try {
+      await tonConnectUI.openModal();
+    } catch (error) {
+      alert("تعذر فتح اتصال المحفظة. تحقق من اتصال الإنترنت وحاول مجدداً.");
+      console.error(error);
+    }
+  });
+
+  disconnectButton.addEventListener("click", async () => {
+    await tonConnectUI.disconnect();
+    showWallet(null);
+  });
+</script>
+</body>
+</html>
